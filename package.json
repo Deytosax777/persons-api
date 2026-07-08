@@ -1,0 +1,38 @@
+{
+  "name": "persons-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "esbuild src/handlers/*.ts --bundle --platform=node --target=node18 --outdir=dist --external:@aws-sdk/*",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "type-check": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Deytosax777/persons-api.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Deytosax777/persons-api/issues"
+  },
+  "homepage": "https://github.com/Deytosax777/persons-api#readme",
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.162",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.1.1",
+    "esbuild": "^0.28.1",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.1082.0",
+    "mysql2": "^3.22.6"
+  }
+}
