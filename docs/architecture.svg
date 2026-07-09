@@ -1,0 +1,159 @@
+<svg width="900" height="620" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+
+  <!-- Fondo -->
+  <rect width="900" height="620" fill="#f8f9fa" rx="12"/>
+
+  <!-- Título -->
+  <text x="450" y="38" text-anchor="middle" font-size="20" font-weight="bold" fill="#1a1a2e">Persons API — Arquitectura AWS</text>
+  <text x="450" y="58" text-anchor="middle" font-size="12" fill="#666">Región: us-east-2</text>
+
+  <!-- ===== VPC ===== -->
+  <rect x="30" y="75" width="840" height="480" rx="10" fill="none" stroke="#f90" stroke-width="2" stroke-dasharray="8,4"/>
+  <text x="50" y="98" font-size="13" font-weight="bold" fill="#f90">Amazon VPC (10.0.0.0/16)</text>
+
+  <!-- Subnet Pública -->
+  <rect x="50" y="110" width="200" height="120" rx="8" fill="#fff8e1" stroke="#fbc02d" stroke-width="1.5"/>
+  <text x="150" y="130" text-anchor="middle" font-size="11" font-weight="bold" fill="#f57f17">Subnet Pública</text>
+
+  <!-- NAT Gateway -->
+  <rect x="75" y="140" width="150" height="70" rx="6" fill="#fff3e0" stroke="#fb8c00" stroke-width="1.5"/>
+  <text x="150" y="163" text-anchor="middle" font-size="11" font-weight="bold" fill="#e65100">NAT Gateway</text>
+  <text x="150" y="180" text-anchor="middle" font-size="10" fill="#666">Salida a internet</text>
+  <text x="150" y="195" text-anchor="middle" font-size="10" fill="#666">para Lambdas</text>
+
+  <!-- Subnet Privada -->
+  <rect x="280" y="110" width="380" height="330" rx="8" fill="#e8f5e9" stroke="#43a047" stroke-width="1.5"/>
+  <text x="470" y="130" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e7d32">Subnet Privada (Lambdas)</text>
+
+  <!-- Lambda Create -->
+  <rect x="300" y="145" width="155" height="60" rx="6" fill="#fff" stroke="#66bb6a" stroke-width="1.5"/>
+  <text x="377" y="168" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e7d32">λ CreatePerson</text>
+  <text x="377" y="185" text-anchor="middle" font-size="10" fill="#666">POST /persons</text>
+
+  <!-- Lambda List -->
+  <rect x="470" y="145" width="155" height="60" rx="6" fill="#fff" stroke="#66bb6a" stroke-width="1.5"/>
+  <text x="547" y="168" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e7d32">λ ListPersons</text>
+  <text x="547" y="185" text-anchor="middle" font-size="10" fill="#666">GET /persons</text>
+
+  <!-- Lambda Update -->
+  <rect x="300" y="225" width="155" height="60" rx="6" fill="#fff" stroke="#66bb6a" stroke-width="1.5"/>
+  <text x="377" y="248" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e7d32">λ UpdatePerson</text>
+  <text x="377" y="265" text-anchor="middle" font-size="10" fill="#666">PUT /persons/{id}</text>
+
+  <!-- Lambda Delete -->
+  <rect x="470" y="225" width="155" height="60" rx="6" fill="#fff" stroke="#66bb6a" stroke-width="1.5"/>
+  <text x="547" y="248" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e7d32">λ DeletePerson</text>
+  <text x="547" y="265" text-anchor="middle" font-size="10" fill="#666">DELETE /persons/{id}</text>
+
+  <!-- Security Group Lambda -->
+  <rect x="293" y="138" width="345" height="160" rx="6" fill="none" stroke="#43a047" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="465" y="310" text-anchor="middle" font-size="10" fill="#43a047">Lambda Security Group</text>
+
+  <!-- Subnet Aislada -->
+  <rect x="680" y="110" width="165" height="200" rx="8" fill="#fce4ec" stroke="#e91e63" stroke-width="1.5"/>
+  <text x="762" y="130" text-anchor="middle" font-size="11" font-weight="bold" fill="#880e4f">Subnet Aislada</text>
+
+  <!-- RDS -->
+  <rect x="697" y="145" width="130" height="140" rx="6" fill="#fff" stroke="#e91e63" stroke-width="1.5"/>
+  <text x="762" y="170" text-anchor="middle" font-size="11" font-weight="bold" fill="#880e4f">RDS MySQL 8.0</text>
+  <text x="762" y="188" text-anchor="middle" font-size="10" fill="#666">db.t3.micro</text>
+  <text x="762" y="205" text-anchor="middle" font-size="10" fill="#666">persons_db</text>
+  <text x="762" y="222" text-anchor="middle" font-size="10" fill="#666">20 GB</text>
+  <text x="762" y="243" text-anchor="middle" font-size="9" fill="#e91e63">RDS Security Group</text>
+  <text x="762" y="258" text-anchor="middle" font-size="9" fill="#666">Puerto 3306</text>
+  <text x="762" y="273" text-anchor="middle" font-size="9" fill="#666">solo desde Lambda SG</text>
+
+  <!-- ===== Servicios fuera de VPC ===== -->
+
+  <!-- API Gateway -->
+  <rect x="50" y="360" width="200" height="80" rx="8" fill="#e3f2fd" stroke="#1976d2" stroke-width="2"/>
+  <text x="150" y="388" text-anchor="middle" font-size="12" font-weight="bold" fill="#0d47a1">API Gateway V2</text>
+  <text x="150" y="406" text-anchor="middle" font-size="10" fill="#666">HTTP API</text>
+  <text x="150" y="422" text-anchor="middle" font-size="10" fill="#1976d2">thmwgbw4a7</text>
+  <text x="150" y="436" text-anchor="middle" font-size="10" fill="#1976d2">.execute-api.us-east-2</text>
+
+  <!-- Secrets Manager -->
+  <rect x="300" y="360" width="170" height="80" rx="8" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="1.5"/>
+  <text x="385" y="388" text-anchor="middle" font-size="12" font-weight="bold" fill="#4a148c">Secrets Manager</text>
+  <text x="385" y="406" text-anchor="middle" font-size="10" fill="#666">/persons-api/</text>
+  <text x="385" y="420" text-anchor="middle" font-size="10" fill="#666">db-credentials</text>
+  <text x="385" y="434" text-anchor="middle" font-size="10" fill="#666">user + password (32 chars)</text>
+
+  <!-- CloudWatch -->
+  <rect x="497" y="360" width="170" height="80" rx="8" fill="#fff8e1" stroke="#f9a825" stroke-width="1.5"/>
+  <text x="582" y="385" text-anchor="middle" font-size="12" font-weight="bold" fill="#f57f17">CloudWatch</text>
+  <text x="582" y="403" text-anchor="middle" font-size="10" fill="#666">Alarm: CPU RDS</text>
+  <text x="582" y="419" text-anchor="middle" font-size="10" fill="#e65100">Threshold: 70%</text>
+  <text x="582" y="435" text-anchor="middle" font-size="10" fill="#666">Periodo: 5 min × 2</text>
+
+  <!-- CloudWatch Logs -->
+  <rect x="697" y="360" width="148" height="80" rx="8" fill="#e0f7fa" stroke="#00838f" stroke-width="1.5"/>
+  <text x="771" y="385" text-anchor="middle" font-size="12" font-weight="bold" fill="#006064">CloudWatch</text>
+  <text x="771" y="401" text-anchor="middle" font-size="12" font-weight="bold" fill="#006064">Logs</text>
+  <text x="771" y="418" text-anchor="middle" font-size="10" fill="#666">/persons-api/lambdas</text>
+  <text x="771" y="432" text-anchor="middle" font-size="10" fill="#666">Retención: 7 días</text>
+
+  <!-- Usuario/Internet -->
+  <rect x="50" y="510" width="120" height="50" rx="8" fill="#eceff1" stroke="#90a4ae" stroke-width="1.5"/>
+  <text x="110" y="532" text-anchor="middle" font-size="12" font-weight="bold" fill="#37474f">Cliente</text>
+  <text x="110" y="549" text-anchor="middle" font-size="10" fill="#666">HTTP Request</text>
+
+  <!-- GitHub Actions -->
+  <rect x="690" y="510" width="160" height="50" rx="8" fill="#f5f5f5" stroke="#424242" stroke-width="1.5"/>
+  <text x="770" y="532" text-anchor="middle" font-size="12" font-weight="bold" fill="#212121">GitHub Actions</text>
+  <text x="770" y="549" text-anchor="middle" font-size="10" fill="#666">CI/CD Pipeline</text>
+
+  <!-- ===== Flechas ===== -->
+
+  <!-- Cliente → API Gateway -->
+  <line x1="170" y1="510" x2="170" y2="440" stroke="#1976d2" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="185" y="480" font-size="9" fill="#1976d2">HTTPS</text>
+
+  <!-- API Gateway → Lambdas -->
+  <line x1="250" y1="395" x2="300" y2="200" stroke="#1976d2" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow)"/>
+
+  <!-- Lambdas → Secrets Manager -->
+  <line x1="385" y1="305" x2="385" y2="360" stroke="#7b1fa2" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow)"/>
+  <text x="390" y="340" font-size="9" fill="#7b1fa2">GetSecretValue</text>
+
+  <!-- Lambdas → RDS -->
+  <line x1="638" y1="200" x2="697" y2="200" stroke="#e91e63" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="648" y="193" font-size="9" fill="#e91e63">MySQL:3306</text>
+
+  <!-- Lambdas → NAT (para Secrets Manager) -->
+  <line x1="300" y1="185" x2="225" y2="175" stroke="#fb8c00" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+  <!-- CloudWatch → RDS -->
+  <line x1="582" y1="360" x2="762" y2="315" stroke="#f9a825" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow)"/>
+  <text x="650" y="335" font-size="9" fill="#f9a825">CPUUtilization</text>
+
+  <!-- GitHub Actions → deploy -->
+  <line x1="770" y1="510" x2="770" y2="440" stroke="#424242" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+  <text x="775" y="480" font-size="9" fill="#424242">cdk deploy</text>
+
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- Leyenda -->
+  <rect x="50" y="575" width="800" height="30" rx="6" fill="#eceff1"/>
+  <text x="70" y="594" font-size="10" fill="#37474f">■ VPC</text>
+  <rect x="95" y="582" width="12" height="12" fill="#fff8e1" stroke="#fbc02d"/>
+  <text x="112" y="594" font-size="10" fill="#37474f">Subnet Pública</text>
+  <rect x="200" y="582" width="12" height="12" fill="#e8f5e9" stroke="#43a047"/>
+  <text x="217" y="594" font-size="10" fill="#37474f">Subnet Privada</text>
+  <rect x="305" y="582" width="12" height="12" fill="#fce4ec" stroke="#e91e63"/>
+  <text x="322" y="594" font-size="10" fill="#37474f">Subnet Aislada</text>
+  <rect x="410" y="582" width="12" height="12" fill="#e3f2fd" stroke="#1976d2"/>
+  <text x="427" y="594" font-size="10" fill="#37474f">API Gateway</text>
+  <rect x="505" y="582" width="12" height="12" fill="#f3e5f5" stroke="#7b1fa2"/>
+  <text x="522" y="594" font-size="10" fill="#37474f">Secrets Manager</text>
+  <rect x="625" y="582" width="12" height="12" fill="#e8f5e9" stroke="#43a047"/>
+  <text x="642" y="594" font-size="10" fill="#37474f">Lambda</text>
+  <rect x="700" y="582" width="12" height="12" fill="#fce4ec" stroke="#e91e63"/>
+  <text x="717" y="594" font-size="10" fill="#37474f">RDS MySQL</text>
+
+</svg>
