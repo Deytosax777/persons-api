@@ -1,0 +1,37 @@
+name: CI — Type Check & Tests
+
+# Se ejecuta en Pull Requests a main y en pushes directos a main
+# Garantiza que solo código correcto pueda fusionarse
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    name: Type Check & Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Type checking — verifica que el código TypeScript es válido
+        run: npm run type-check
+
+      - name: Ejecutar tests unitarios
+        run: npm test
+
+      - name: Publicar reporte de cobertura (opcional)
+        if: always()
+        run: npm run test:coverage

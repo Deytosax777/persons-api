@@ -1,0 +1,54 @@
+name: Deploy — Build & CDK Deploy
+
+# Solo se ejecuta cuando llegan cambios a main
+# El job de CI debe pasar primero (definido en ci.yml)
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Build & Deploy to AWS
+    runs-on: ubuntu-latest
+
+    # Permisos mínimos necesarios para el job
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Instalar dependencias raíz (Lambda)
+        run: npm ci
+
+      - name: Type checking antes del deploy
+        run: npm run type-check
+
+      - name: Ejecutar tests antes del deploy
+        run: npm test
+
+      - name: Build — compilar handlers con esbuild
+        run: npm run build
+
+      - name: Instalar dependencias de infraestructura CDK
+        working-directory: infra
+        run: npm ci
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+      - name: CDK Deploy — desplegar infraestructura y código
+        working-directory: infra
+        run: npx cdk deploy --require-approval never
+        # --require-approval never evita prompts interactivos en CI
