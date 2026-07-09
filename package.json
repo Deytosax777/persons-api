@@ -32,6 +32,7 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1084.0",
     "@aws-sdk/client-secrets-manager": "^3.1082.0",
     "mysql2": "^3.22.6"
   }

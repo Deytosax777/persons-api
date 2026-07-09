@@ -7,7 +7,7 @@ import * as apigatewayv2integrations from 'aws-cdk-lib/aws-apigatewayv2-integrat
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import * as path from 'path';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 
 export class PersonsStack extends cdk.Stack {
@@ -16,104 +16,94 @@ export class PersonsStack extends cdk.Stack {
 
     // ================================================================
     // VPC — requerida por regulaciones para aislar las Lambdas
-    // Usamos 2 AZs para alta disponibilidad sin costos excesivos
-    // NAT Gateway en cada AZ permite a las Lambdas acceder a Secrets Manager
     // ================================================================
     const vpc = new ec2.Vpc(this, 'PersonsVpc', {
       maxAzs: 2,
-      natGateways: 1, // 1 NAT Gateway para reducir costos (suficiente para dev/staging)
+      natGateways: 1,
       subnetConfiguration: [
-        {
-          cidrMask: 24,
-          name: 'Public',
-          subnetType: ec2.SubnetType.PUBLIC,
-        },
-        {
-          cidrMask: 24,
-          name: 'Private',
-          // Lambdas en subnets privadas — acceso a internet via NAT Gateway
-          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-        },
-        {
-          cidrMask: 24,
-          name: 'Isolated',
-          // RDS en subnets aisladas — sin acceso a internet por seguridad
-          subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-        },
+        { cidrMask: 24, name: 'Public', subnetType: ec2.SubnetType.PUBLIC },
+        { cidrMask: 24, name: 'Private', subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+        { cidrMask: 24, name: 'Isolated', subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       ],
     });
 
     // ================================================================
     // Security Groups
-    // Principio de mínimo privilegio: cada SG solo permite lo necesario
     // ================================================================
-
-    // SG para las Lambdas
     const lambdaSG = new ec2.SecurityGroup(this, 'LambdaSG', {
       vpc,
       description: 'Security group para funciones Lambda',
-      allowAllOutbound: true, // Necesario para llamar a Secrets Manager via NAT
+      allowAllOutbound: true,
     });
 
-    // SG para RDS — solo acepta conexiones desde las Lambdas
     const rdsSG = new ec2.SecurityGroup(this, 'RdsSG', {
       vpc,
       description: 'Security group para RDS MySQL',
       allowAllOutbound: false,
     });
 
-    rdsSG.addIngressRule(
-      lambdaSG,
-      ec2.Port.tcp(3306),
-      'Permitir MySQL solo desde las Lambdas'
-    );
+    rdsSG.addIngressRule(lambdaSG, ec2.Port.tcp(3306), 'Permitir MySQL solo desde las Lambdas');
 
     // ================================================================
-    // Secrets Manager — credenciales de la BD generadas automáticamente
-    // Evita hardcodear passwords en el código o variables de entorno
+    // S3 Bucket — persistencia de archivos subidos por usuarios
+    // Acceso público bloqueado: archivos solo accesibles via Lambda
+    // Versioning activado para recuperar archivos eliminados accidentalmente
+    // ================================================================
+    const filesBucket = new s3.Bucket(this, 'PersonsFilesBucket', {
+      bucketName: `persons-api-files-${this.account}`,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      versioned: true,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+      lifecycleRules: [
+        {
+          id: 'MoveToIA',
+          transitions: [
+            {
+              storageClass: s3.StorageClass.INFREQUENT_ACCESS,
+              transitionAfter: cdk.Duration.days(30),
+            },
+          ],
+        },
+      ],
+    });
+
+    // ================================================================
+    // Secrets Manager
     // ================================================================
     const dbSecret = new secretsmanager.Secret(this, 'DbSecret', {
       secretName: '/persons-api/db-credentials',
       generateSecretString: {
         secretStringTemplate: JSON.stringify({ username: 'admin' }),
         generateStringKey: 'password',
-        excludePunctuation: true, // MySQL no tolera algunos caracteres especiales
+        excludePunctuation: true,
         passwordLength: 32,
       },
     });
 
     // ================================================================
-    // RDS MySQL — base de datos relacional requerida por el enunciado
-    // Usamos t3.micro para minimizar costos en la prueba técnica
-    // Multi-AZ desactivado para reducir costos (activar en producción)
+    // RDS MySQL
     // ================================================================
     const dbInstance = new rds.DatabaseInstance(this, 'PersonsDb', {
-      engine: rds.DatabaseInstanceEngine.mysql({
-        version: rds.MysqlEngineVersion.VER_8_0,
-      }),
-      instanceType: ec2.InstanceType.of(
-        ec2.InstanceClass.T3,
-        ec2.InstanceSize.MICRO
-      ),
+      engine: rds.DatabaseInstanceEngine.mysql({ version: rds.MysqlEngineVersion.VER_8_0 }),
+      instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
       vpc,
-      vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-      },
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       securityGroups: [rdsSG],
       credentials: rds.Credentials.fromSecret(dbSecret),
       databaseName: 'persons_db',
-      multiAz: false, // Desactivado para reducir costos en la prueba
+      multiAz: false,
       allocatedStorage: 20,
       maxAllocatedStorage: 100,
-      deletionProtection: false, // Permite destruir el stack fácilmente
+      deletionProtection: false,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
-      // CloudWatch Logs para queries lentas y errores
       cloudwatchLogsExports: ['error', 'slowquery'],
       cloudwatchLogsRetention: logs.RetentionDays.ONE_WEEK,
     });
 
     // ================================================================
-    // Alarma CloudWatch — CPU > 70% en RDS (requerido por el enunciado)
+    // Alarma CloudWatch — CPU > 70% en RDS
     // ================================================================
     new cloudwatch.Alarm(this, 'DbCpuAlarm', {
       alarmName: 'persons-db-cpu-high',
@@ -123,7 +113,7 @@ export class PersonsStack extends cdk.Stack {
         statistic: 'Average',
       }),
       threshold: 70,
-      evaluationPeriods: 2, // Debe superar 70% en 2 periodos consecutivos para evitar falsos positivos
+      evaluationPeriods: 2,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
@@ -137,15 +127,14 @@ export class PersonsStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // Variables de entorno comunes para todas las Lambdas
     const commonEnv = {
       DB_SECRET_ARN: dbSecret.secretArn,
       DB_NAME: 'persons_db',
-      AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1', // Reutiliza conexiones HTTP para Secrets Manager
+      FILES_BUCKET_NAME: filesBucket.bucketName,
+      AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
       NODE_OPTIONS: '--enable-source-maps',
     };
 
-    // Configuración común para todas las Lambdas
     const commonLambdaProps = {
       runtime: lambda.Runtime.NODEJS_18_X,
       vpc,
@@ -158,11 +147,8 @@ export class PersonsStack extends cdk.Stack {
     };
 
     // ================================================================
-    // Lambdas — una por handler para seguir el principio de
-    // responsabilidad única y poder escalar/monitorear independientemente
+    // Lambdas
     // ================================================================
-
-    // Usamos NodejsFunction que integra esbuild automáticamente en el deploy
     const createPersonFn = new lambda.Function(this, 'CreatePersonFn', {
       ...commonLambdaProps,
       functionName: 'persons-api-create',
@@ -195,15 +181,31 @@ export class PersonsStack extends cdk.Stack {
       description: 'DELETE /persons/{personId} - Elimina una persona',
     });
 
-    // Dar permisos a cada Lambda para leer el secreto de la BD
+    // Lambda para subir archivos a S3
+    // Mayor memoria y timeout para manejar archivos
+    const uploadFileFn = new lambda.Function(this, 'UploadFileFn', {
+      ...commonLambdaProps,
+      functionName: 'persons-api-upload-file',
+      handler: 'uploadFile.handler',
+      code: lambda.Code.fromAsset('../dist'),
+      description: 'POST /persons/{personId}/files - Sube un archivo a S3',
+      memorySize: 512,
+      timeout: cdk.Duration.seconds(60),
+    });
+
+    // Permisos Secrets Manager para todas las Lambdas
     dbSecret.grantRead(createPersonFn);
     dbSecret.grantRead(listPersonsFn);
     dbSecret.grantRead(updatePersonFn);
     dbSecret.grantRead(deletePersonFn);
+    dbSecret.grantRead(uploadFileFn);
+
+    // Permiso S3 solo para la Lambda de upload
+    // Principio de mínimo privilegio: solo quien necesita accede al bucket
+    filesBucket.grantPut(uploadFileFn);
 
     // ================================================================
-    // API Gateway V2 (HTTP API) — más barato y simple que REST API
-    // para este caso de uso que no requiere autenticación compleja
+    // API Gateway V2
     // ================================================================
     const api = new apigatewayv2.HttpApi(this, 'PersonsApi', {
       apiName: 'persons-api',
@@ -211,49 +213,43 @@ export class PersonsStack extends cdk.Stack {
       corsPreflight: {
         allowOrigins: ['*'],
         allowMethods: [apigatewayv2.CorsHttpMethod.ANY],
-        allowHeaders: ['Content-Type', 'Authorization'],
+        allowHeaders: ['Content-Type', 'Authorization', 'x-file-name'],
       },
     });
 
-    // Rutas de la API
     api.addRoutes({
       path: '/persons',
       methods: [apigatewayv2.HttpMethod.POST],
-      integration: new apigatewayv2integrations.HttpLambdaIntegration(
-        'CreatePersonIntegration',
-        createPersonFn
-      ),
+      integration: new apigatewayv2integrations.HttpLambdaIntegration('CreatePersonIntegration', createPersonFn),
     });
 
     api.addRoutes({
       path: '/persons',
       methods: [apigatewayv2.HttpMethod.GET],
-      integration: new apigatewayv2integrations.HttpLambdaIntegration(
-        'ListPersonsIntegration',
-        listPersonsFn
-      ),
+      integration: new apigatewayv2integrations.HttpLambdaIntegration('ListPersonsIntegration', listPersonsFn),
     });
 
     api.addRoutes({
       path: '/persons/{personId}',
       methods: [apigatewayv2.HttpMethod.PUT],
-      integration: new apigatewayv2integrations.HttpLambdaIntegration(
-        'UpdatePersonIntegration',
-        updatePersonFn
-      ),
+      integration: new apigatewayv2integrations.HttpLambdaIntegration('UpdatePersonIntegration', updatePersonFn),
     });
 
     api.addRoutes({
       path: '/persons/{personId}',
       methods: [apigatewayv2.HttpMethod.DELETE],
-      integration: new apigatewayv2integrations.HttpLambdaIntegration(
-        'DeletePersonIntegration',
-        deletePersonFn
-      ),
+      integration: new apigatewayv2integrations.HttpLambdaIntegration('DeletePersonIntegration', deletePersonFn),
+    });
+
+    // Nueva ruta para subida de archivos
+    api.addRoutes({
+      path: '/persons/{personId}/files',
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: new apigatewayv2integrations.HttpLambdaIntegration('UploadFileIntegration', uploadFileFn),
     });
 
     // ================================================================
-    // Outputs — valores importantes para usar después del deploy
+    // Outputs
     // ================================================================
     new cdk.CfnOutput(this, 'ApiUrl', {
       value: api.apiEndpoint,
@@ -271,6 +267,12 @@ export class PersonsStack extends cdk.Stack {
       value: dbInstance.instanceEndpoint.hostname,
       description: 'Endpoint de la base de datos RDS',
       exportName: 'PersonsDbEndpoint',
+    });
+
+    new cdk.CfnOutput(this, 'FilesBucketName', {
+      value: filesBucket.bucketName,
+      description: 'Nombre del bucket S3 para archivos de personas',
+      exportName: 'PersonsFilesBucketName',
     });
   }
 }
